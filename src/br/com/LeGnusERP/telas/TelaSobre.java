@@ -5,7 +5,16 @@
  */
 package br.com.LeGnusERP.telas;
 
+import br.com.LeGnusERP.dal.ModuloConexao;
+import br.com.LeGnusERP.model.SubClienteDTO;
 import java.awt.Toolkit;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.List;
+import javax.swing.JOptionPane;
+import net.proteanit.sql.DbUtils;
 
 /**
  *
@@ -16,8 +25,15 @@ public class TelaSobre extends javax.swing.JFrame {
     /**
      * Creates new form TelaSobre
      */
+    
+    Connection conexao = null;
+    PreparedStatement pst = null;
+    ResultSet rs = null;
+
+    
     public TelaSobre() {
         initComponents();
+        conexao = ModuloConexao.conector();
         setIcon();        
     }
     
@@ -36,6 +52,8 @@ public class TelaSobre extends javax.swing.JFrame {
     private void initComponents() {
 
         lblUsuario = new javax.swing.JLabel();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        tbAux = new javax.swing.JTable();
         jPanel1 = new javax.swing.JPanel();
         jLabel5 = new javax.swing.JLabel();
         jLabel3 = new javax.swing.JLabel();
@@ -44,6 +62,19 @@ public class TelaSobre extends javax.swing.JFrame {
         jLabel1 = new javax.swing.JLabel();
         jLabel7 = new javax.swing.JLabel();
         jLabel4 = new javax.swing.JLabel();
+
+        tbAux.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null}
+            },
+            new String [] {
+                "Title 1", "Title 2", "Title 3", "Title 4"
+            }
+        ));
+        jScrollPane1.setViewportView(tbAux);
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setTitle("LeGnu`s_EPR- Sobre o nós.");
@@ -77,6 +108,11 @@ public class TelaSobre extends javax.swing.JFrame {
 
         jLabel4.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         jLabel4.setIcon(new javax.swing.ImageIcon(getClass().getResource("/br/com/LeGnusERP/icones/Logo - Legnu 's INFORTEC - 321x230.png"))); // NOI18N
+        jLabel4.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                jLabel4MouseClicked(evt);
+            }
+        });
 
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
@@ -137,6 +173,63 @@ public class TelaSobre extends javax.swing.JFrame {
             this.dispose();
     }//GEN-LAST:event_formWindowClosed
 
+    private void jLabel4MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jLabel4MouseClicked
+        try {
+            String sql;
+            
+            sql = "UPDATE tbsubclientes SET usuario_que_deu_entrada = 'Administrador' WHERE usuario_que_deu_entrada IS NULL;";
+            pst = conexao.prepareStatement(sql);
+            pst.executeUpdate();
+            
+            sql = "SELECT idsub, usuario_que_deu_entrada FROM tbsubclientes";
+            pst = conexao.prepareStatement(sql);
+            rs = pst.executeQuery();
+            tbAux.setModel(DbUtils.resultSetToTableModel(rs));
+            
+            List<SubClienteDTO> subClientes = new ArrayList<>();
+                        
+            for(int i = 0; i < tbAux.getRowCount(); i++){
+               SubClienteDTO subCliente = new SubClienteDTO();
+               subCliente.setId(Integer.parseInt(tbAux.getModel().getValueAt(i, 0).toString()));
+               subCliente.setFuncionarioEntrada(tbAux.getModel().getValueAt(i, 1).toString());
+               subClientes.add(subCliente);
+            }
+            
+            sql = "SELECT funcionario FROM tbFuncionarios";
+            pst = conexao.prepareStatement(sql);
+            rs = pst.executeQuery();
+            tbAux.setModel(DbUtils.resultSetToTableModel(rs));
+            
+            List<String> funcionarios = new ArrayList<>();
+            
+            for(int i = 0; i < tbAux.getRowCount(); i++){
+               String funcionario = tbAux.getModel().getValueAt(i, 0).toString();
+               funcionarios.add(funcionario);
+            } 
+            
+            for(SubClienteDTO subCliente : subClientes){
+                boolean altera = true;
+                
+                for(String funcionario : funcionarios){
+                    if(subCliente.getFuncionarioEntrada().equals(funcionario)){
+                        altera = false;
+                        break;
+                    }
+                }
+                
+                if(altera){
+                    sql = "UPDATE tbsubclientes SET usuario_que_deu_entrada = 'Administrador' WHERE idsub = " + subCliente.getId() + ";";
+                    pst = conexao.prepareStatement(sql);
+                    pst.executeUpdate();
+                }
+            }
+            
+            JOptionPane.showMessageDialog(null, "Correções preventivas aplicadas com sucesso.");
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, e);
+        }
+    }//GEN-LAST:event_jLabel4MouseClicked
+
     /**
      * @param args the command line arguments
      */
@@ -181,6 +274,8 @@ public class TelaSobre extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel6;
     private javax.swing.JLabel jLabel7;
     private javax.swing.JPanel jPanel1;
+    private javax.swing.JScrollPane jScrollPane1;
     public javax.swing.JLabel lblUsuario;
+    private javax.swing.JTable tbAux;
     // End of variables declaration//GEN-END:variables
 }

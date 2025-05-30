@@ -43,7 +43,8 @@ descricao varchar(80),
 ano varchar(4),
 referencia text,
 obs text,
-tipo varchar(80)
+tipo varchar(80),
+ultimaEntrada timestamp
 );
 
 create table tbos(
@@ -238,6 +239,13 @@ insert into tbgastos(idgastos,valor,data_emissao,data_pagamento,nome,forma_pagam
 insert into tbcompra(idcompra,nome_produto,valor,valor_unidade,quantidade_comprada,fornecedor,identificador)values("1","Compra teste","0.01","0.01","1","Selecione","1");
 insert into tbVale(idVale,senha) values(1,"vazio");
 
+ALTER TABLE tbsubclientes ADD COLUMN ultimaEntrada timestamp;
+ALTER TABLE tbsubclientes ADD COLUMN usuario_que_deu_entrada varchar(255);
+ALTER TABLE tbsubclientes ADD COLUMN garantia timestamp;
+
+UPDATE tbsubclientes SET usuario_que_deu_entrada = 'Administrador' WHERE usuario_que_deu_entrada IS NULL;
+UPDATE tbsubclientes SET garantia = current_timestamp() WHERE garantia IS NULL;
+
 select nome as Venda,tipo as Tipo,quantidade as QTDE,preco as Preço,comissao as Comissão_De,porcentagem as Ganho_Comissão,emicao as Emissão from tbvenda where (vendedor = ? or comissao = ? ) and tipo != 'Taxa';
 
 select * from tbusuarios;
@@ -245,4 +253,5 @@ select * from tbvenda;
 select * from tbprodutos;
 select * from tbFuncionarios;
 select * from tbrelatorio;
+select * from tbsubclientes;
 select * from tbVale;

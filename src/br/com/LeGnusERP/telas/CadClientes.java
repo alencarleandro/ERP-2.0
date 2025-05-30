@@ -63,7 +63,7 @@ public class CadClientes extends javax.swing.JFrame {
 
     public void InstanciarTabela() {
         try {
-            String sql = "select idcli as ID, nomecli as Cliente, sexocli as Sexo, cepcli as Cep ,endcli as Endereço, telefonecli as Telefone, emailcli as Email from tbclientes";
+            String sql = "select idcli as ID, nomecli as Cliente, sexocli as Sexo, cepcli as Cep ,endcli as Endereço, telefonecli as Telefone, emailcli as Email from tbclientes order by idcli desc";
             pst = conexao.prepareStatement(sql);
             rs = pst.executeQuery();
             tbClientes.setModel(DbUtils.resultSetToTableModel(rs));
@@ -110,7 +110,14 @@ public class CadClientes extends javax.swing.JFrame {
     }
 
     private void pesquisar_cliente() {
-        String sql = "select idcli as ID, nomecli as Cliente, sexocli as Sexo, cepcli as Cep ,endcli as Endereço, telefonecli as Telefone, emailcli as Email from tbclientes where nomecli like ?";
+        String sql = "";
+        
+        if(rbPorNome.isSelected()){
+            sql = "select idcli as ID, nomecli as Cliente, sexocli as Sexo, cepcli as Cep ,endcli as Endereço, telefonecli as Telefone, emailcli as Email from tbclientes where nomecli like ?";
+        }else{
+            sql = "select idcli as ID, nomecli as Cliente, sexocli as Sexo, cepcli as Cep ,endcli as Endereço, telefonecli as Telefone, emailcli as Email from tbclientes where idcli like ?";
+        }        
+         
         try {
             pst = conexao.prepareStatement(sql);
             pst.setString(1, txtCliPesquisar.getText() + "%");
@@ -317,6 +324,7 @@ public class CadClientes extends javax.swing.JFrame {
         scAuxilio1 = new javax.swing.JScrollPane();
         tbAuxilio1 = new javax.swing.JTable();
         lblUsuario = new javax.swing.JLabel();
+        meioDeBusca = new javax.swing.ButtonGroup();
         jPanel2 = new javax.swing.JPanel();
         jPanel8 = new javax.swing.JPanel();
         pnClientes = new javax.swing.JPanel();
@@ -324,6 +332,12 @@ public class CadClientes extends javax.swing.JFrame {
         tbClientes = new javax.swing.JTable();
         lblPesquisar = new javax.swing.JLabel();
         txtCliPesquisar = new javax.swing.JTextField();
+        jPanel9 = new javax.swing.JPanel();
+        jLabel1 = new javax.swing.JLabel();
+        rbPorID = new javax.swing.JRadioButton();
+        rbPorNome = new javax.swing.JRadioButton();
+        jLabel4 = new javax.swing.JLabel();
+        cbOrdenacao = new javax.swing.JComboBox<>();
         lblCamposObrigatorios = new javax.swing.JLabel();
         jPanel3 = new javax.swing.JPanel();
         txtCliNome = new javax.swing.JTextField();
@@ -428,6 +442,71 @@ public class CadClientes extends javax.swing.JFrame {
             }
         });
 
+        jPanel9.setBackground(java.awt.SystemColor.control);
+        jPanel9.setBorder(javax.swing.BorderFactory.createMatteBorder(0, 0, 1, 1, new java.awt.Color(153, 153, 153)));
+
+        jLabel1.setFont(new java.awt.Font("Dialog", 3, 14)); // NOI18N
+        jLabel1.setText("Meio de busca");
+
+        meioDeBusca.add(rbPorID);
+        rbPorID.setText("Por ID");
+
+        meioDeBusca.add(rbPorNome);
+        rbPorNome.setSelected(true);
+        rbPorNome.setText("Por Nome");
+        rbPorNome.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                rbPorNomeActionPerformed(evt);
+            }
+        });
+
+        jLabel4.setFont(new java.awt.Font("Dialog", 3, 14)); // NOI18N
+        jLabel4.setText("Ordenar por");
+
+        cbOrdenacao.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Ultimos Inseridos", "Primeiros Inseridos" }));
+        cbOrdenacao.setToolTipText("");
+        cbOrdenacao.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                cbOrdenacaoActionPerformed(evt);
+            }
+        });
+
+        javax.swing.GroupLayout jPanel9Layout = new javax.swing.GroupLayout(jPanel9);
+        jPanel9.setLayout(jPanel9Layout);
+        jPanel9Layout.setHorizontalGroup(
+            jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel9Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel9Layout.createSequentialGroup()
+                        .addComponent(rbPorNome)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(rbPorID))
+                    .addComponent(jLabel1))
+                .addGap(18, 18, 18)
+                .addGroup(jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel4)
+                    .addComponent(cbOrdenacao, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+        jPanel9Layout.setVerticalGroup(
+            jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel9Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addGroup(jPanel9Layout.createSequentialGroup()
+                        .addComponent(jLabel4, javax.swing.GroupLayout.PREFERRED_SIZE, 19, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(cbOrdenacao, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(jPanel9Layout.createSequentialGroup()
+                        .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 19, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(3, 3, 3)
+                        .addGroup(jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(rbPorID)
+                            .addComponent(rbPorNome))))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+
         javax.swing.GroupLayout pnClientesLayout = new javax.swing.GroupLayout(pnClientes);
         pnClientes.setLayout(pnClientesLayout);
         pnClientesLayout.setHorizontalGroup(
@@ -436,22 +515,30 @@ public class CadClientes extends javax.swing.JFrame {
                 .addContainerGap()
                 .addGroup(pnClientesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(pnClientesLayout.createSequentialGroup()
-                        .addComponent(lblPesquisar)
-                        .addGap(8, 8, 8)
-                        .addComponent(txtCliPesquisar))
-                    .addComponent(scClientes, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 610, Short.MAX_VALUE))
-                .addContainerGap())
+                        .addComponent(scClientes, javax.swing.GroupLayout.DEFAULT_SIZE, 617, Short.MAX_VALUE)
+                        .addContainerGap())
+                    .addGroup(pnClientesLayout.createSequentialGroup()
+                        .addGroup(pnClientesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(pnClientesLayout.createSequentialGroup()
+                                .addComponent(jPanel9, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(0, 0, Short.MAX_VALUE))
+                            .addGroup(pnClientesLayout.createSequentialGroup()
+                                .addComponent(lblPesquisar)
+                                .addGap(19, 19, 19)
+                                .addComponent(txtCliPesquisar)))
+                        .addGap(6, 6, 6))))
         );
         pnClientesLayout.setVerticalGroup(
             pnClientesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, pnClientesLayout.createSequentialGroup()
-                .addGap(16, 16, 16)
+                .addComponent(jPanel9, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(18, 18, 18)
                 .addGroup(pnClientesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(lblPesquisar)
                     .addComponent(txtCliPesquisar, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(16, 16, 16)
-                .addComponent(scClientes, javax.swing.GroupLayout.DEFAULT_SIZE, 647, Short.MAX_VALUE)
-                .addContainerGap())
+                .addGap(18, 18, 18)
+                .addComponent(scClientes, javax.swing.GroupLayout.DEFAULT_SIZE, 586, Short.MAX_VALUE)
+                .addGap(3, 3, 3))
         );
 
         lblCamposObrigatorios.setFont(new java.awt.Font("Arial", 3, 14)); // NOI18N
@@ -633,7 +720,7 @@ public class CadClientes extends javax.swing.JFrame {
                 .addComponent(pnClientes, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jPanel8Layout.createSequentialGroup()
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 100, Short.MAX_VALUE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 99, Short.MAX_VALUE)
                         .addComponent(btnAdicionar, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(8, 8, 8)
                         .addComponent(btnAlterar, javax.swing.GroupLayout.PREFERRED_SIZE, 69, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -643,7 +730,7 @@ public class CadClientes extends javax.swing.JFrame {
                         .addComponent(btnSubCliente)
                         .addGap(8, 8, 8)
                         .addComponent(btnAtualizar)
-                        .addContainerGap(136, Short.MAX_VALUE))
+                        .addContainerGap(130, Short.MAX_VALUE))
                     .addComponent(jPanel1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel8Layout.createSequentialGroup()
                         .addComponent(jPanel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
@@ -807,6 +894,35 @@ public class CadClientes extends javax.swing.JFrame {
         }
     }//GEN-LAST:event_formWindowClosed
 
+    private void rbPorNomeActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_rbPorNomeActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_rbPorNomeActionPerformed
+
+    private void cbOrdenacaoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cbOrdenacaoActionPerformed
+        try {
+            String sql;
+                if (!cbOrdenacao.getSelectedItem().equals("Primeiros Inseridos")) {
+                    sql = "select idcli as ID, nomecli as Cliente, sexocli as Sexo, cepcli as Cep ,endcli as Endereço, telefonecli as Telefone, emailcli as Email from tbclientes order by idcli desc";
+
+                    pst = conexao.prepareStatement(sql);
+                    rs = pst.executeQuery();
+                    tbClientes.setModel(DbUtils.resultSetToTableModel(rs));
+
+                } else {
+                    sql = "select idcli as ID, nomecli as Cliente, sexocli as Sexo, cepcli as Cep ,endcli as Endereço, telefonecli as Telefone, emailcli as Email from tbclientes order by idcli asc";
+
+                    pst  = conexao.prepareStatement(sql);
+                    rs = pst.executeQuery();
+                    tbClientes.setModel(DbUtils.resultSetToTableModel(rs));
+                }
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, e);
+            limpar();
+
+        }
+    }//GEN-LAST:event_cbOrdenacaoActionPerformed
+
     /**
      * @param args the command line arguments
      */
@@ -849,7 +965,10 @@ public class CadClientes extends javax.swing.JFrame {
     private javax.swing.JToggleButton btnAtualizar;
     private javax.swing.JButton btnRemover;
     private javax.swing.JToggleButton btnSubCliente;
+    private javax.swing.JComboBox<String> cbOrdenacao;
     private javax.swing.JComboBox<String> cbSexo;
+    private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel4;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;
@@ -858,11 +977,15 @@ public class CadClientes extends javax.swing.JFrame {
     private javax.swing.JPanel jPanel6;
     private javax.swing.JPanel jPanel7;
     private javax.swing.JPanel jPanel8;
+    private javax.swing.JPanel jPanel9;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JLabel lblCamposObrigatorios;
     private javax.swing.JLabel lblPesquisar;
     public javax.swing.JLabel lblUsuario;
+    private javax.swing.ButtonGroup meioDeBusca;
     private javax.swing.JPanel pnClientes;
+    private javax.swing.JRadioButton rbPorID;
+    private javax.swing.JRadioButton rbPorNome;
     private javax.swing.JScrollPane scAuxilio;
     private javax.swing.JScrollPane scAuxilio1;
     private javax.swing.JScrollPane scClientes;

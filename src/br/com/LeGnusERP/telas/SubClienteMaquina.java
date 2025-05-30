@@ -25,10 +25,29 @@ package br.com.LeGnusERP.telas;
 
 import br.com.LeGnusERP.dal.ModuloConexao;
 import static br.com.LeGnusERP.telas.SubClienteAnimal.IdCliente;
+import com.itextpdf.kernel.colors.Color;
+import com.itextpdf.kernel.colors.DeviceRgb;
+import com.itextpdf.kernel.geom.PageSize;
+import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.layout.Document;
+import com.itextpdf.layout.borders.Border;
+import com.itextpdf.layout.element.Cell;
+import com.itextpdf.layout.element.Paragraph;
+import com.itextpdf.layout.property.TextAlignment;
+import com.itextpdf.layout.property.VerticalAlignment;
+
+import java.awt.Desktop;
 import java.awt.Toolkit;
+import java.io.File;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.Timestamp;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import javax.swing.JOptionPane;
 import net.proteanit.sql.DbUtils;
 
@@ -41,37 +60,46 @@ public class SubClienteMaquina extends javax.swing.JFrame {
     /**
      * Creates new form SubClienteMaquina
      */
-    
     Connection conexao = null;
     PreparedStatement pst = null;
     ResultSet rs = null;
-    
+
+    DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
     public SubClienteMaquina() {
         initComponents();
         conexao = ModuloConexao.conector();
-      setIcon();        
+        setIcon();
+        InstanciarComboboxUsuario();
     }
-    
+
     private void setIcon() {
-            setIconImage(Toolkit.getDefaultToolkit().getImage(getClass().getResource("/br/com/LeGnusERP/icones/Logo - Legnu 's INFORTEC - 81x58.png")));
+        setIconImage(Toolkit.getDefaultToolkit().getImage(getClass().getResource("/br/com/LeGnusERP/icones/Logo - Legnu 's INFORTEC - 81x58.png")));
     }
-    
+
     private void adicionar() {
-        String sql = "insert into tbsubclientes(nome,especie_marca,raca_modelo,ano,cor,tamanho,referencia,obs,tipo)values(?,?,?,?,?,?,?,?,?)";
+        String sql = "insert into tbsubclientes(nome,especie_marca,raca_modelo,ano,cor,tamanho,referencia,obs,tipo,ultimaEntrada,usuario_que_deu_entrada)values(?,?,?,?,?,?,?,?,?,?,?)";
         try {
+
+            Date d = new Date();
+            java.sql.Date dSql = new java.sql.Date(d.getTime());
+            df.format(dSql);
+
             pst = conexao.prepareStatement(sql);
             pst.setString(1, txtDescricao.getText());
             pst.setString(2, txtMarca.getText());
             pst.setString(3, txtModelo.getText());
             pst.setString(4, txtAno.getText());
             pst.setString(5, txtCor.getText());
-            pst.setString(6, txtTamanho.getText());       
+            pst.setString(6, txtTamanho.getText());
             pst.setString(7, IdCliente.getText());
             pst.setString(8, txtOBS.getText());
             pst.setString(9, "Maquina");
+            pst.setTimestamp(10, Timestamp.valueOf(df.format(d)));
+            pst.setString(11, cbUsuarioEntrada.getSelectedItem().toString());
 
             //Validação dos Campos Obrigatorios
-            if ((txtDescricao.getText().isEmpty() == true )) {
+            if ((txtDescricao.getText().isEmpty() == true)) {
                 JOptionPane.showMessageDialog(null, "Preencha todos os campos obrigatorios");
             } else {
 
@@ -86,7 +114,22 @@ public class SubClienteMaquina extends javax.swing.JFrame {
             }
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null, e);
+        }
+    }
+
+    public void InstanciarComboboxUsuario() {
+        try {
+            cbUsuarioEntrada.removeAllItems();
+            String sql = "select usuario from tbusuarios";
+            pst = conexao.prepareStatement(sql);
+            rs = pst.executeQuery();
+            while (rs.next()) {
+                cbUsuarioEntrada.addItem(rs.getString("usuario"));
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, e);
             limpar();
+
         }
     }
 
@@ -107,7 +150,7 @@ public class SubClienteMaquina extends javax.swing.JFrame {
     public void instanciarTabela() {
         try {
             NomeReferencia();
-            String sql = "select idsub as ID, nome as Nome from tbsubclientes where tipo='Maquina' and referencia=?";
+            String sql = "select idsub as ID, nome as Nome, ultimaEntrada as UltimaEntrada from tbsubclientes where tipo='Maquina' and referencia=?";
             pst = conexao.prepareStatement(sql);
             pst.setString(1, IdCliente.getText());
             rs = pst.executeQuery();
@@ -120,10 +163,10 @@ public class SubClienteMaquina extends javax.swing.JFrame {
             limpar();
         }
     }
-    
+
     public void instanciarTabelaAuxilio() {
-        try {          
-            String sql = "select idsub,nome,especie_marca,raca_modelo,ano,cor,tamanho,referencia,obs from tbsubclientes where tipo='Maquina' and referencia=?";
+        try {
+            String sql = "select idsub,nome,especie_marca,raca_modelo,ano,cor,tamanho,referencia,obs,usuario_que_deu_entrada,garantia from tbsubclientes where tipo='Maquina' and referencia=?";
             pst = conexao.prepareStatement(sql);
             pst.setString(1, IdCliente.getText());
             rs = pst.executeQuery();
@@ -134,23 +177,24 @@ public class SubClienteMaquina extends javax.swing.JFrame {
             limpar();
         }
     }
-    
 
     private void alterar() {
         //idsub,nome,especie_marca,raca_modelo,ano,cor,tamanho,obs
-        String sql = "update tbsubclientes set nome=?,especie_marca=?,raca_modelo=?,ano=?,cor=?,tamanho=?,obs=? where idsub=?";
+        String sql = "update tbsubclientes set nome=?,especie_marca=?,raca_modelo=?,ano=?,cor=?,tamanho=?,obs=?,usuario_que_deu_entrada=? where idsub=?";
         try {
+
             pst = conexao.prepareStatement(sql);
             pst.setString(1, txtDescricao.getText());
             pst.setString(2, txtMarca.getText());
             pst.setString(3, txtModelo.getText());
             pst.setString(4, txtAno.getText());
             pst.setString(5, txtCor.getText());
-            pst.setString(6, txtTamanho.getText());   
+            pst.setString(6, txtTamanho.getText());
             pst.setString(7, txtOBS.getText());
-            pst.setString(8, ID_Sub.getText());
+            pst.setString(8, cbUsuarioEntrada.getSelectedItem().toString());
+            pst.setString(9, ID_Sub.getText());
 
-           if ((txtDescricao.getText().isEmpty() == true)) {
+            if ((txtDescricao.getText().isEmpty() == true)) {
                 JOptionPane.showMessageDialog(null, "Preencha todos os campos obrigatorios");
             } else {
 
@@ -165,9 +209,41 @@ public class SubClienteMaquina extends javax.swing.JFrame {
             }
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null, e);
-            limpar();
         }
 
+    }
+
+    private void atualizarEntrada() {
+        //idsub,nome,especie_marca,raca_modelo,ano,cor,tamanho,obs
+        String sql = "update tbsubclientes set ultimaEntrada=?, usuario_que_deu_entrada=? where idsub=?";
+        try {
+
+            Date d = new Date();
+            java.sql.Date dSql = new java.sql.Date(d.getTime());
+            df.format(dSql);
+
+            pst = conexao.prepareStatement(sql);
+            pst.setTimestamp(1, Timestamp.valueOf(df.format(d)));
+            pst.setString(2, cbUsuarioEntrada.getSelectedItem().toString());
+            pst.setString(3, ID_Sub.getText());
+
+            if ((txtDescricao.getText().isEmpty() == true)) {
+                JOptionPane.showMessageDialog(null, "Preencha todos os campos obrigatorios");
+            } else {
+
+                //A linha abaixo atualiza os dados do novo usuario
+                int adicionado = pst.executeUpdate();
+                //A Linha abaixo serve de apoio ao entendimento da logica
+                //System.out.println(adicionado);
+                if (adicionado > 0) {
+                    JOptionPane.showMessageDialog(null, "Entrada da maquina atualizada com sucesso");
+                    limpar();
+                }
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, e);
+            limpar();
+        }
     }
 
     private void remover() {
@@ -200,28 +276,240 @@ public class SubClienteMaquina extends javax.swing.JFrame {
 
     public void setar_campos() {
         int setar = tbSubTabela.getSelectedRow();
+        instanciarTabelaAuxilio();
+        DateFormat dfo = new SimpleDateFormat("yyyy-MM-dd");
         //idsub,nome,especie_marca,raca_modelo,ano,cor,tamanho,obs
-        ID_Sub.setText(tbAuxilioSub.getModel().getValueAt(setar, 0).toString());
-        txtDescricao.setText(tbAuxilioSub.getModel().getValueAt(setar, 1).toString());
-        txtMarca.setText(tbAuxilioSub.getModel().getValueAt(setar, 2).toString());
-        txtModelo.setText(tbAuxilioSub.getModel().getValueAt(setar, 3).toString());
-        txtAno.setText(tbAuxilioSub.getModel().getValueAt(setar, 4).toString());
-        txtCor.setText(tbAuxilioSub.getModel().getValueAt(setar, 5).toString());
-        txtTamanho.setText(tbAuxilioSub.getModel().getValueAt(setar, 6).toString());      
-        txtOBS.setText(tbAuxilioSub.getModel().getValueAt(setar, 8).toString());
-        
+        try {
+
+            ID_Sub.setText(tbAuxilioSub.getModel().getValueAt(setar, 0).toString());
+
+            if (tbAuxilioSub.getModel().getValueAt(setar, 1) != null) {
+                txtDescricao.setText(tbAuxilioSub.getModel().getValueAt(setar, 1).toString());
+            } else {
+                txtDescricao.setText("");
+            }
+
+            if (tbAuxilioSub.getModel().getValueAt(setar, 2) != null) {
+                txtMarca.setText(tbAuxilioSub.getModel().getValueAt(setar, 2).toString());
+            } else {
+                txtMarca.setText("");
+            }
+
+            if (tbAuxilioSub.getModel().getValueAt(setar, 3) != null) {
+                txtModelo.setText(tbAuxilioSub.getModel().getValueAt(setar, 3).toString());
+            } else {
+                txtModelo.setText("");
+            }
+            if (tbAuxilioSub.getModel().getValueAt(setar, 4) != null) {
+                txtAno.setText(tbAuxilioSub.getModel().getValueAt(setar, 4).toString());
+            } else {
+                txtAno.setText("");
+            }
+            if (tbAuxilioSub.getModel().getValueAt(setar, 5) != null) {
+                txtCor.setText(tbAuxilioSub.getModel().getValueAt(setar, 5).toString());
+            } else {
+                txtCor.setText("");
+            }
+            if (tbAuxilioSub.getModel().getValueAt(setar, 6) != null) {
+                txtTamanho.setText(tbAuxilioSub.getModel().getValueAt(setar, 6).toString());
+            } else {
+                txtTamanho.setText("");
+            }
+            if (tbAuxilioSub.getModel().getValueAt(setar, 8) != null) {
+                txtOBS.setText(tbAuxilioSub.getModel().getValueAt(setar, 8).toString());
+            } else {
+                txtOBS.setText("");
+            }
+            if (tbAuxilioSub.getModel().getValueAt(setar, 9) != null) {
+                cbUsuarioEntrada.setSelectedItem(tbAuxilioSub.getModel().getValueAt(setar, 9).toString());
+            } else {
+                cbUsuarioEntrada.setSelectedItem("Administrador");
+            }
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, e);
+            limpar();
+        }
 
         //A Linha Abaixo desabilita o botão adicionar
         btnAdicionar.setEnabled(false);
-        btnAtualizar.setEnabled(true);
+        btnImprimir.setEnabled(true);
+        btnAtualizarEntrada.setEnabled(true);
         btnAlterar.setEnabled(true);
         btnRemover.setEnabled(true);
-  
+        btnAtualizarEntrada.setEnabled(true);
 
     }
 
-    private void limpar() {
+    public void imprimir() {
 
+        int confirma = JOptionPane.showConfirmDialog(null, "Deseja criar um relatorio dos dados do equipamento selecionado?", "Atenção", JOptionPane.YES_NO_OPTION);
+
+        if (confirma == JOptionPane.YES_OPTION) {
+            try {
+                String opcao = JOptionPane.showInputDialog("Escolha o tipo de relatorio\n"
+                        + "A4 >>> Digite '1'.\n"
+                        + "Rolo 0.8mm >>> Digite '2'.\n"
+                        + "OBS: Caracteres aceitados são somente 1,2.");
+
+                String path = System.getProperty("user.home") + File.separator + "RelatoriosERP"
+                        + File.separator + "OrdensDeServiço" + File.separator
+                        + txtDescricao.getText().replace(" ", "") + "_" + ".pdf";
+                new File(path).getParentFile().mkdirs();
+
+                String imprecao = "select nome_empresa,nome_proprietario,email_proprietario,descricao,obs,numero,imagem from tbrelatorio where idRelatorio=1";
+                pst = conexao.prepareStatement(imprecao);
+                rs = pst.executeQuery();
+                tbAuxilio.setModel(DbUtils.resultSetToTableModel(rs));
+
+                String nome_empresa = tbAuxilio.getModel().getValueAt(0, 0).toString();
+                String nome_proprietario = tbAuxilio.getModel().getValueAt(0, 1).toString();
+                String descricao = tbAuxilio.getModel().getValueAt(0, 3).toString();
+
+                if (opcao.equals("1")) {
+
+                    PdfWriter pdfWriter = new PdfWriter(path);
+                    PdfDocument pdfDocument = new PdfDocument(pdfWriter);
+                    Document document = new Document(pdfDocument);
+                    pdfDocument.setDefaultPageSize(PageSize.A4);
+
+                    float col = 280f;
+                    float columnWidth[] = {360f, 200f};
+                    com.itextpdf.layout.element.Table sumario = new com.itextpdf.layout.element.Table(columnWidth);
+
+                    sumario.setBackgroundColor(new DeviceRgb(63, 169, 219))
+                            .setFontColor(Color.convertRgbToCmyk(new DeviceRgb(255, 255, 255)));
+
+                    sumario.addCell(new Cell().add(new Paragraph("Dados do equipamento")).setTextAlignment(TextAlignment.CENTER)
+                            .setVerticalAlignment(VerticalAlignment.MIDDLE).setMarginTop(30f).setMarginBottom(30f)
+                            .setFontSize(30f).setBorder(Border.NO_BORDER));
+
+                    sumario.addCell(new Cell().add(new Paragraph(" \n" + nome_empresa + " \n"))
+                            .setTextAlignment(TextAlignment.RIGHT).setMarginTop(30f).setMarginBottom(30f)
+                            .setBorder(Border.NO_BORDER).setMarginRight(10f));
+
+                    float colCliente[] = {560};
+                    com.itextpdf.layout.element.Table dadosCliente = new com.itextpdf.layout.element.Table(colCliente);
+
+                    dadosCliente.addCell(new Cell().add(new Paragraph("Informações do cliente")).setBold().setBorder(Border.NO_BORDER));
+                    dadosCliente.addCell(new Cell().add(new Paragraph("Nome: " + NomeCliente.getText())).setBorder(Border.NO_BORDER));
+                    dadosCliente.addCell(new Cell().add(new Paragraph("Nome do equipamento: " + txtDescricao.getText())).setBorder(Border.NO_BORDER));
+                    dadosCliente.addCell(new Cell().add(new Paragraph("")).setBorder(Border.NO_BORDER));
+                    dadosCliente.addCell(new Cell().add(new Paragraph("Funcionario que registrou")).setBold().setBorder(Border.NO_BORDER));
+                    dadosCliente.addCell(new Cell().add(new Paragraph("Nome: " + cbUsuarioEntrada.getSelectedItem().toString())).setBorder(Border.NO_BORDER));
+
+                    float colSubCliente[] = {560};
+                    com.itextpdf.layout.element.Table dadosSubCliente = new com.itextpdf.layout.element.Table(colSubCliente);
+
+                    dadosSubCliente.addCell(new Cell(2, 2).add(new Paragraph("Dados do equipamento selecionado")).setBold().setBorder(Border.NO_BORDER));
+
+                    float colDetalhamentoDadosSubCliente[] = {280, 280};
+                    com.itextpdf.layout.element.Table detalhamentoDadosSubCliente = new com.itextpdf.layout.element.Table(colDetalhamentoDadosSubCliente);
+
+                    detalhamentoDadosSubCliente.addCell(new Cell(1, 1).add(new Paragraph("Nome: " + txtDescricao.getText())).setBorder(Border.NO_BORDER));
+                    detalhamentoDadosSubCliente.addCell(new Cell(1, 1).add(new Paragraph("Cor: " + txtCor.getText())).setBorder(Border.NO_BORDER));
+                    detalhamentoDadosSubCliente.addCell(new Cell(1, 1).add(new Paragraph("Marca: " + txtMarca.getText())).setBorder(Border.NO_BORDER));
+
+                    detalhamentoDadosSubCliente.addCell(new Cell(2, 2).add(new Paragraph("Modelo: " + txtModelo.getText())).setBorder(Border.NO_BORDER));
+                    detalhamentoDadosSubCliente.addCell(new Cell(2, 2).add(new Paragraph("Tamanho: " + txtTamanho.getText())).setBorder(Border.NO_BORDER));
+                    detalhamentoDadosSubCliente.addCell(new Cell(2, 2).add(new Paragraph("Ano: " + txtAno.getText())).setBorder(Border.NO_BORDER));
+
+                    com.itextpdf.layout.element.Table observacao = new com.itextpdf.layout.element.Table(colSubCliente);
+                    observacao.addCell(new Cell(2, 2).add(new Paragraph("Observacoes")).setBold().setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.CENTER));
+                    observacao.addCell(new Cell(1, 1).add(new Paragraph("Detalhamento: " + txtOBS.getText())).setBorder(Border.NO_BORDER));
+
+                    document.add(sumario);
+                    document.add(new Paragraph("\n"));
+                    document.add(dadosCliente);
+                    document.add(new Paragraph("\n"));
+                    document.add(dadosSubCliente);
+                    document.add(detalhamentoDadosSubCliente);
+                    document.add(new Paragraph("\n"));
+                    document.add(observacao);
+                    document.close();
+
+                    JOptionPane.showMessageDialog(null, "Pdf criado com sucesso, guardado em " + path);
+
+                    if (Desktop.isDesktopSupported()) {
+                        File pdfFile = new File(path);
+                        Desktop.getDesktop().open(pdfFile);
+                    }
+
+                } else if (opcao.equals("2")) {
+
+                    PdfWriter pdfWriter = new PdfWriter(path);
+                    PdfDocument pdfDocument = new PdfDocument(pdfWriter);
+                    PageSize pageSize = new PageSize(226.77f, 800f);
+                    pdfDocument.setDefaultPageSize(pageSize);
+                    Document document = new Document(pdfDocument);
+
+                    float columnWidth[] = {113f, 113f};
+                    com.itextpdf.layout.element.Table sumario = new com.itextpdf.layout.element.Table(columnWidth);
+                    sumario.setBackgroundColor(new DeviceRgb(63, 169, 219))
+                            .setFontColor(Color.convertRgbToCmyk(new DeviceRgb(255, 255, 255)));
+                    sumario.addCell(new Cell().add(new Paragraph("Dados do equipamento"))
+                            .setVerticalAlignment(VerticalAlignment.MIDDLE)
+                            .setMarginTop(5f).setMarginBottom(5f)
+                            .setFontSize(12f).setBorder(Border.NO_BORDER));
+                    sumario.addCell(new Cell().add(new Paragraph(" \n" + nome_empresa + " \n"))
+                            .setTextAlignment(TextAlignment.RIGHT).setMarginTop(5f).setMarginBottom(5f)
+                            .setBorder(Border.NO_BORDER).setMarginRight(5f));
+
+                    float colCliente[] = {226.77f};
+                    com.itextpdf.layout.element.Table dadosCliente = new com.itextpdf.layout.element.Table(colCliente);
+                    dadosCliente.addCell(new Cell().add(new Paragraph("Informações do cliente")).setBold().setBorder(Border.NO_BORDER));
+                    dadosCliente.addCell(new Cell().add(new Paragraph("Nome: " + NomeCliente.getText())).setBorder(Border.NO_BORDER));
+                    dadosCliente.addCell(new Cell().add(new Paragraph("Equipamento: " + txtDescricao.getText())).setBorder(Border.NO_BORDER));
+                    dadosCliente.addCell(new Cell().add(new Paragraph("")).setBorder(Border.NO_BORDER));
+                    dadosCliente.addCell(new Cell().add(new Paragraph("Funcionário que registrou")).setBold().setBorder(Border.NO_BORDER));
+                    dadosCliente.addCell(new Cell().add(new Paragraph("Nome: " + cbUsuarioEntrada.getSelectedItem().toString())).setBorder(Border.NO_BORDER));
+
+                    float colSubCliente[] = {226.77f};
+                    com.itextpdf.layout.element.Table dadosSubCliente = new com.itextpdf.layout.element.Table(colSubCliente);
+                    dadosSubCliente.addCell(new Cell(1, 1).add(new Paragraph("Dados do equipamento selecionado")).setBold().setBorder(Border.NO_BORDER));
+
+                    float colDetalhamentoDadosSubCliente[] = {226f};
+                    com.itextpdf.layout.element.Table detalhamentoDadosSubCliente = new com.itextpdf.layout.element.Table(colDetalhamentoDadosSubCliente);
+                    detalhamentoDadosSubCliente.addCell(new Cell().add(new Paragraph("Nome: " + txtDescricao.getText())).setBorder(Border.NO_BORDER));
+                    detalhamentoDadosSubCliente.addCell(new Cell().add(new Paragraph("Cor: " + txtCor.getText())).setBorder(Border.NO_BORDER));
+                    detalhamentoDadosSubCliente.addCell(new Cell().add(new Paragraph("Marca: " + txtMarca.getText())).setBorder(Border.NO_BORDER));
+                    detalhamentoDadosSubCliente.addCell(new Cell().add(new Paragraph("Modelo: " + txtModelo.getText())).setBorder(Border.NO_BORDER));
+                    detalhamentoDadosSubCliente.addCell(new Cell().add(new Paragraph("Tamanho: " + txtTamanho.getText())).setBorder(Border.NO_BORDER));
+                    detalhamentoDadosSubCliente.addCell(new Cell().add(new Paragraph("Ano: " + txtAno.getText())).setBorder(Border.NO_BORDER));
+
+                    com.itextpdf.layout.element.Table observacao = new com.itextpdf.layout.element.Table(colSubCliente);
+                    observacao.addCell(new Cell().add(new Paragraph("Observações"))
+                            .setBold().setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.CENTER));
+                    observacao.addCell(new Cell().add(new Paragraph("Detalhamento: " + txtOBS.getText())).setBorder(Border.NO_BORDER));
+
+                    document.add(sumario);
+                    document.add(new Paragraph("\n"));
+                    document.add(dadosCliente);
+                    document.add(new Paragraph("\n"));
+                    document.add(dadosSubCliente);
+                    document.add(detalhamentoDadosSubCliente);
+                    document.add(new Paragraph("\n"));
+                    document.add(observacao);
+                    document.close();
+
+                    JOptionPane.showMessageDialog(null, "Pdf criado com sucesso, guardado em " + path);
+
+                    if (Desktop.isDesktopSupported()) {
+                        File pdfFile = new File(path);
+                        Desktop.getDesktop().open(pdfFile);
+                    }
+
+                } else {
+                    JOptionPane.showMessageDialog(null, "Alternativa invalida, as Disponiveis são 1,2.");
+                    limpar();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void limpar() {
         txtAno.setText(null);
         txtCor.setText(null);
         txtDescricao.setText(null);
@@ -231,12 +519,12 @@ public class SubClienteMaquina extends javax.swing.JFrame {
         txtTamanho.setText(null);
 
         btnAdicionar.setEnabled(true);
-        btnAtualizar.setEnabled(true);
+        btnAtualizarEntrada.setEnabled(true);
         btnAlterar.setEnabled(false);
         btnRemover.setEnabled(false);
-
+        btnAtualizarEntrada.setEnabled(false);
+        btnImprimir.setEnabled(false);
     }
-
 
     /**
      * This method is called from within the constructor to initialize the form.
@@ -255,6 +543,8 @@ public class SubClienteMaquina extends javax.swing.JFrame {
         NomeCliente = new javax.swing.JTextField();
         scAuxilio = new javax.swing.JScrollPane();
         tbAuxilio = new javax.swing.JTable();
+        scImpressao = new javax.swing.JScrollPane();
+        tbImpressao = new javax.swing.JTable();
         jPanel8 = new javax.swing.JPanel();
         jPanel9 = new javax.swing.JPanel();
         pnTabela = new javax.swing.JPanel();
@@ -262,10 +552,12 @@ public class SubClienteMaquina extends javax.swing.JFrame {
         tbSubTabela = new javax.swing.JTable();
         jPanel10 = new javax.swing.JPanel();
         lblCamposObrigatorios = new javax.swing.JLabel();
-        btnAtualizar = new javax.swing.JToggleButton();
+        btnAtualizarEntrada = new javax.swing.JToggleButton();
         btnRemover = new javax.swing.JButton();
         btnAlterar = new javax.swing.JButton();
         btnAdicionar = new javax.swing.JButton();
+        btnAtualizar = new javax.swing.JToggleButton();
+        btnImprimir = new javax.swing.JToggleButton();
         jPanel3 = new javax.swing.JPanel();
         txtMarca = new javax.swing.JTextField();
         jPanel4 = new javax.swing.JPanel();
@@ -281,6 +573,8 @@ public class SubClienteMaquina extends javax.swing.JFrame {
         jPanel1 = new javax.swing.JPanel();
         jScrollPane1 = new javax.swing.JScrollPane();
         txtOBS = new javax.swing.JTextArea();
+        jPanel11 = new javax.swing.JPanel();
+        cbUsuarioEntrada = new javax.swing.JComboBox<>();
 
         tbAuxilioSub.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
@@ -309,6 +603,19 @@ public class SubClienteMaquina extends javax.swing.JFrame {
             }
         ));
         scAuxilio.setViewportView(tbAuxilio);
+
+        tbImpressao.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null}
+            },
+            new String [] {
+                "Title 1", "Title 2", "Title 3", "Title 4"
+            }
+        ));
+        scImpressao.setViewportView(tbImpressao);
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setTitle("LeGnu`s_EPR - Tela SubClientes");
@@ -358,7 +665,7 @@ public class SubClienteMaquina extends javax.swing.JFrame {
             pnTabelaLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(pnTabelaLayout.createSequentialGroup()
                 .addGap(8, 8, 8)
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 361, Short.MAX_VALUE)
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 292, Short.MAX_VALUE)
                 .addGap(8, 8, 8))
         );
         pnTabelaLayout.setVerticalGroup(
@@ -375,14 +682,15 @@ public class SubClienteMaquina extends javax.swing.JFrame {
         lblCamposObrigatorios.setFont(new java.awt.Font("Arial", 3, 14)); // NOI18N
         lblCamposObrigatorios.setText("* Campos Obrigatorios");
 
-        btnAtualizar.setIcon(new javax.swing.ImageIcon(getClass().getResource("/br/com/LeGnusERP/icones/iconeRestart-removebg-preview.png"))); // NOI18N
-        btnAtualizar.setToolTipText("");
-        btnAtualizar.setBorderPainted(false);
-        btnAtualizar.setContentAreaFilled(false);
-        btnAtualizar.setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
-        btnAtualizar.addActionListener(new java.awt.event.ActionListener() {
+        btnAtualizarEntrada.setIcon(new javax.swing.ImageIcon(getClass().getResource("/br/com/LeGnusERP/icones/entrada.png"))); // NOI18N
+        btnAtualizarEntrada.setToolTipText("");
+        btnAtualizarEntrada.setBorderPainted(false);
+        btnAtualizarEntrada.setContentAreaFilled(false);
+        btnAtualizarEntrada.setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
+        btnAtualizarEntrada.setEnabled(false);
+        btnAtualizarEntrada.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btnAtualizarActionPerformed(evt);
+                btnAtualizarEntradaActionPerformed(evt);
             }
         });
 
@@ -421,6 +729,29 @@ public class SubClienteMaquina extends javax.swing.JFrame {
             }
         });
 
+        btnAtualizar.setIcon(new javax.swing.ImageIcon(getClass().getResource("/br/com/LeGnusERP/icones/iconeRestart-removebg-preview.png"))); // NOI18N
+        btnAtualizar.setToolTipText("");
+        btnAtualizar.setBorderPainted(false);
+        btnAtualizar.setContentAreaFilled(false);
+        btnAtualizar.setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
+        btnAtualizar.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnAtualizarActionPerformed(evt);
+            }
+        });
+
+        btnImprimir.setIcon(new javax.swing.ImageIcon(getClass().getResource("/br/com/LeGnusERP/icones/ImpresoraIcon.png"))); // NOI18N
+        btnImprimir.setToolTipText("");
+        btnImprimir.setBorderPainted(false);
+        btnImprimir.setContentAreaFilled(false);
+        btnImprimir.setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
+        btnImprimir.setEnabled(false);
+        btnImprimir.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnImprimirActionPerformed(evt);
+            }
+        });
+
         jPanel3.setBackground(java.awt.SystemColor.control);
         jPanel3.setBorder(javax.swing.BorderFactory.createTitledBorder(javax.swing.BorderFactory.createMatteBorder(1, 0, 1, 1, new java.awt.Color(153, 153, 153)), "Marca", javax.swing.border.TitledBorder.LEFT, javax.swing.border.TitledBorder.TOP, new java.awt.Font("Arial", 3, 12))); // NOI18N
 
@@ -429,8 +760,8 @@ public class SubClienteMaquina extends javax.swing.JFrame {
         jPanel3Layout.setHorizontalGroup(
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel3Layout.createSequentialGroup()
-                .addComponent(txtMarca, javax.swing.GroupLayout.PREFERRED_SIZE, 193, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(0, 0, Short.MAX_VALUE))
+                .addComponent(txtMarca)
+                .addGap(0, 0, 0))
         );
         jPanel3Layout.setVerticalGroup(
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -450,7 +781,7 @@ public class SubClienteMaquina extends javax.swing.JFrame {
         jPanel4.setLayout(jPanel4Layout);
         jPanel4Layout.setHorizontalGroup(
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(txtModelo, javax.swing.GroupLayout.DEFAULT_SIZE, 180, Short.MAX_VALUE)
+            .addComponent(txtModelo)
         );
         jPanel4Layout.setVerticalGroup(
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -492,7 +823,7 @@ public class SubClienteMaquina extends javax.swing.JFrame {
         jPanel6.setLayout(jPanel6Layout);
         jPanel6Layout.setHorizontalGroup(
             jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(txtCor, javax.swing.GroupLayout.DEFAULT_SIZE, 118, Short.MAX_VALUE)
+            .addComponent(txtCor)
         );
         jPanel6Layout.setVerticalGroup(
             jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -528,7 +859,29 @@ public class SubClienteMaquina extends javax.swing.JFrame {
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 175, Short.MAX_VALUE)
+            .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 220, Short.MAX_VALUE)
+        );
+
+        jPanel11.setBackground(java.awt.SystemColor.control);
+        jPanel11.setBorder(javax.swing.BorderFactory.createTitledBorder(javax.swing.BorderFactory.createMatteBorder(1, 0, 1, 0, new java.awt.Color(153, 153, 153)), "* Usuário que deu entrada", javax.swing.border.TitledBorder.LEFT, javax.swing.border.TitledBorder.TOP, new java.awt.Font("Arial", 3, 12))); // NOI18N
+
+        cbUsuarioEntrada.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                cbUsuarioEntradaActionPerformed(evt);
+            }
+        });
+
+        javax.swing.GroupLayout jPanel11Layout = new javax.swing.GroupLayout(jPanel11);
+        jPanel11.setLayout(jPanel11Layout);
+        jPanel11Layout.setHorizontalGroup(
+            jPanel11Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(cbUsuarioEntrada, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+        );
+        jPanel11Layout.setVerticalGroup(
+            jPanel11Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel11Layout.createSequentialGroup()
+                .addGap(0, 0, 0)
+                .addComponent(cbUsuarioEntrada, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
         );
 
         javax.swing.GroupLayout jPanel10Layout = new javax.swing.GroupLayout(jPanel10);
@@ -538,38 +891,47 @@ public class SubClienteMaquina extends javax.swing.JFrame {
             .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
             .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
             .addGroup(jPanel10Layout.createSequentialGroup()
-                .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(0, 0, 0)
-                .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGroup(jPanel10Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel10Layout.createSequentialGroup()
+                        .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addGap(0, 0, 0)
+                        .addComponent(jPanel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addGroup(jPanel10Layout.createSequentialGroup()
+                        .addComponent(jPanel6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addGap(0, 0, 0)
+                        .addComponent(jPanel7, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(0, 0, 0)
+                        .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(0, 0, 0)))
                 .addGap(0, 0, 0))
-            .addGroup(jPanel10Layout.createSequentialGroup()
-                .addComponent(jPanel6, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(0, 0, 0)
-                .addComponent(jPanel7, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(0, 0, 0)
-                .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(0, 0, 0))
-            .addGroup(jPanel10Layout.createSequentialGroup()
+            .addComponent(jPanel11, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel10Layout.createSequentialGroup()
                 .addGap(0, 0, Short.MAX_VALUE)
+                .addComponent(lblCamposObrigatorios)
+                .addGap(16, 16, 16))
+            .addGroup(jPanel10Layout.createSequentialGroup()
+                .addContainerGap()
                 .addComponent(btnAdicionar, javax.swing.GroupLayout.PREFERRED_SIZE, 61, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(8, 8, 8)
                 .addComponent(btnAlterar, javax.swing.GroupLayout.PREFERRED_SIZE, 66, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(8, 8, 8)
                 .addComponent(btnRemover, javax.swing.GroupLayout.PREFERRED_SIZE, 64, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(8, 8, 8)
+                .addComponent(btnAtualizarEntrada, javax.swing.GroupLayout.PREFERRED_SIZE, 64, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(btnAtualizar, javax.swing.GroupLayout.PREFERRED_SIZE, 78, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(btnImprimir, javax.swing.GroupLayout.PREFERRED_SIZE, 78, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel10Layout.createSequentialGroup()
-                .addGap(0, 0, Short.MAX_VALUE)
-                .addComponent(lblCamposObrigatorios)
-                .addGap(16, 16, 16))
         );
         jPanel10Layout.setVerticalGroup(
             jPanel10Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel10Layout.createSequentialGroup()
                 .addGap(16, 16, 16)
                 .addComponent(lblCamposObrigatorios)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 102, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 7, Short.MAX_VALUE)
+                .addComponent(jPanel11, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(8, 8, 8)
                 .addGroup(jPanel10Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -582,13 +944,16 @@ public class SubClienteMaquina extends javax.swing.JFrame {
                     .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(16, 16, 16)
                 .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addGap(16, 16, 16)
+                .addGap(18, 18, 18)
                 .addGroup(jPanel10Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(btnAdicionar, javax.swing.GroupLayout.PREFERRED_SIZE, 63, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(btnAlterar, javax.swing.GroupLayout.PREFERRED_SIZE, 63, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(btnRemover, javax.swing.GroupLayout.PREFERRED_SIZE, 63, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(btnAtualizar, javax.swing.GroupLayout.PREFERRED_SIZE, 63, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(16, 16, 16))
+                    .addComponent(btnAtualizarEntrada, javax.swing.GroupLayout.PREFERRED_SIZE, 64, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGroup(jPanel10Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                        .addComponent(btnImprimir, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
+                        .addComponent(btnAtualizar, javax.swing.GroupLayout.PREFERRED_SIZE, 63, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addGap(14, 14, 14))
         );
 
         javax.swing.GroupLayout jPanel9Layout = new javax.swing.GroupLayout(jPanel9);
@@ -599,7 +964,7 @@ public class SubClienteMaquina extends javax.swing.JFrame {
                 .addComponent(pnTabela, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGap(0, 0, 0)
                 .addComponent(jPanel10, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(6, 6, 6))
+                .addContainerGap())
         );
         jPanel9Layout.setVerticalGroup(
             jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -644,10 +1009,10 @@ public class SubClienteMaquina extends javax.swing.JFrame {
         alterar();
     }//GEN-LAST:event_btnAlterarActionPerformed
 
-    private void btnAtualizarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAtualizarActionPerformed
+    private void btnAtualizarEntradaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAtualizarEntradaActionPerformed
         // TODO add your handling code here:
-        limpar();
-    }//GEN-LAST:event_btnAtualizarActionPerformed
+        atualizarEntrada();
+    }//GEN-LAST:event_btnAtualizarEntradaActionPerformed
 
     private void btnRemoverActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRemoverActionPerformed
         remover();
@@ -670,6 +1035,20 @@ public class SubClienteMaquina extends javax.swing.JFrame {
         // TODO add your handling code here:
         setar_campos();
     }//GEN-LAST:event_tbSubTabelaMouseClicked
+
+    private void btnAtualizarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAtualizarActionPerformed
+        // TODO add your handling code here:
+        limpar();
+    }//GEN-LAST:event_btnAtualizarActionPerformed
+
+    private void cbUsuarioEntradaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cbUsuarioEntradaActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_cbUsuarioEntradaActionPerformed
+
+    private void btnImprimirActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnImprimirActionPerformed
+        // TODO add your handling code here:
+        imprimir();
+    }//GEN-LAST:event_btnImprimirActionPerformed
 
     /**
      * @param args the command line arguments
@@ -714,9 +1093,13 @@ public class SubClienteMaquina extends javax.swing.JFrame {
     private javax.swing.JButton btnAdicionar;
     private javax.swing.JButton btnAlterar;
     private javax.swing.JToggleButton btnAtualizar;
+    private javax.swing.JToggleButton btnAtualizarEntrada;
+    private javax.swing.JToggleButton btnImprimir;
     private javax.swing.JButton btnRemover;
+    private javax.swing.JComboBox<String> cbUsuarioEntrada;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel10;
+    private javax.swing.JPanel jPanel11;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;
     private javax.swing.JPanel jPanel4;
@@ -731,8 +1114,10 @@ public class SubClienteMaquina extends javax.swing.JFrame {
     private javax.swing.JPanel pnTabela;
     private javax.swing.JScrollPane scAuxilio;
     private javax.swing.JScrollPane scAuxilioSub;
+    private javax.swing.JScrollPane scImpressao;
     private javax.swing.JTable tbAuxilio;
     private javax.swing.JTable tbAuxilioSub;
+    private javax.swing.JTable tbImpressao;
     private javax.swing.JTable tbSubTabela;
     private javax.swing.JTextField txtAno;
     private javax.swing.JTextField txtCor;

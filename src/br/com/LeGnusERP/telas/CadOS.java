@@ -31,6 +31,7 @@ import java.awt.Toolkit;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -99,8 +100,8 @@ public class CadOS extends javax.swing.JFrame {
         try {
             if (lblUsuario.getText().equals("")) {
                 TelaPrincipal principal = new TelaPrincipal();
-            principal.setVisible(true);
-            this.dispose();
+                principal.setVisible(true);
+                this.dispose();
             } else {
                 String sqy = "select perfil from tbusuarios where usuario=?";
                 pst = conexao.prepareStatement(sqy);
@@ -145,6 +146,7 @@ public class CadOS extends javax.swing.JFrame {
             pst = conexao.prepareStatement(sql);
             rs = pst.executeQuery();
             tbPrincipal.setModel(DbUtils.resultSetToTableModel(rs));
+
             tipo = "Cliente";
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null, e);
@@ -154,7 +156,14 @@ public class CadOS extends javax.swing.JFrame {
     }
 
     private void pesquisar_cliente() {
-        String sql = "select idcli as ID, nomecli as Nome, telefonecli as Telefone from tbclientes where nomecli like ? and idcli > 1";
+        String sql = "";
+
+        if (rbPorNome.isSelected()) {
+            sql = "select idcli as ID, nomecli as Nome, telefonecli as Telefone from tbclientes where nomecli like ? and idcli > 1";
+        } else {
+            sql = "select idcli as ID, nomecli as Nome, telefonecli as Telefone from tbclientes where nomecli like ? and idcli > 1";
+        }
+
         try {
             pst = conexao.prepareStatement(sql);
             pst.setString(1, txtCliPesquisar.getText() + "%");
@@ -176,6 +185,7 @@ public class CadOS extends javax.swing.JFrame {
             rs = pst.executeQuery();
             tbPrincipal.setModel(DbUtils.resultSetToTableModel(rs));
             tipo = "Orcamento_OS";
+            cbFiltroSituacao.setSelectedIndex(0);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null, e);
             limpar();
@@ -183,8 +193,49 @@ public class CadOS extends javax.swing.JFrame {
         }
     }
 
+    public void instanciarTabelaMaquinas(int idcli) {
+        try {
+            String sql = "select nome, ultimaEntrada, cor, especie_marca from tbsubclientes where tipo='Maquina' and referencia=?";
+            pst = conexao.prepareStatement(sql);
+            pst.setString(1, String.valueOf(idcli));
+            rs = pst.executeQuery();
+            tbEquipamentos.setModel(DbUtils.resultSetToTableModel(rs));
+
+            for (int i = 0; i < tbEquipamentos.getModel().getRowCount(); i++) {
+                cbEquipamento.addItem(tbEquipamentos.getModel().getValueAt(i, 0).toString());
+                cbDataEquipamentos.addItem(tbEquipamentos.getModel().getValueAt(i, 1).toString());
+            }
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, e);
+            limpar();
+        }
+    }
+
+    public void instanciarTabelaMaquinasAux(int idcli) {
+        try {
+            String sql = "select nome,ultimaEntrada,cor,especie_marca,usuario_que_deu_entrada,garantia,idsub from tbsubclientes where tipo='Maquina' and referencia=?";
+            pst = conexao.prepareStatement(sql);
+            pst.setString(1, String.valueOf(idcli));
+            rs = pst.executeQuery();
+            tbEquipamentos.setModel(DbUtils.resultSetToTableModel(rs));
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, e);
+            limpar();
+        }
+    }
+
     private void pesquisar_orcamento() {
-        String sql = "select os as Numero_da_Ordem_de_Serviço, data_os as Emição, tipo as Tipo, situacao as Situação, previsao_entreg_os as Previsão_de_Entrega, equipamento as Equipamento, defeito as Defeito, servico as Serviço, funcionario as Funcionario, valor as Valor, cliente as Cliente from tbos where servico like ? ";
+
+        String sql = "";
+
+        if (rbPorNome.isSelected()) {
+            sql = "select os as Numero_da_Ordem_de_Serviço, data_os as Emição, tipo as Tipo, situacao as Situação, previsao_entreg_os as Previsão_de_Entrega, equipamento as Equipamento, defeito as Defeito, servico as Serviço, funcionario as Funcionario, valor as Valor, cliente as Cliente from tbos where cliente like ? ";
+        } else {
+            sql = "select os as Numero_da_Ordem_de_Serviço, data_os as Emição, tipo as Tipo, situacao as Situação, previsao_entreg_os as Previsão_de_Entrega, equipamento as Equipamento, defeito as Defeito, servico as Serviço, funcionario as Funcionario, valor as Valor, cliente as Cliente from tbos where servico like ? ";
+        }
+
         try {
             pst = conexao.prepareStatement(sql);
             pst.setString(1, txtCliPesquisar.getText() + "%");
@@ -199,11 +250,8 @@ public class CadOS extends javax.swing.JFrame {
 
     public void pesquisar() {
         if (tipo.equals("Cliente") == true) {
-
             pesquisar_cliente();
-
         } else {
-
             pesquisar_orcamento();
         }
     }
@@ -214,7 +262,7 @@ public class CadOS extends javax.swing.JFrame {
             int setar = tbPrincipal.getSelectedRow();
             txtCliente.setText(tbPrincipal.getModel().getValueAt(setar, 1).toString());
             txtOsDef.setEnabled(true);
-            txtOsEquip.setEnabled(true);
+            cbEquipamento.setEnabled(true);
             txtOsServ.setEnabled(true);
             cbFuncionario.setEnabled(true);
             txtOsValor.setEnabled(true);
@@ -227,6 +275,15 @@ public class CadOS extends javax.swing.JFrame {
             btnImprimir.setEnabled(false);
             btnEditar.setEnabled(false);
 
+            cbEquipamento.removeAllItems();
+
+            instanciarTabelaMaquinas(Integer.parseInt(tbPrincipal.getModel().getValueAt(setar, 0).toString()));
+
+            if (tbEquipamentos.getModel().getRowCount() == 0) {
+                JOptionPane.showMessageDialog(null, "Cliente com nenhum equipamento registrado.");
+                limpar();
+            }
+
         } else {
 
             try {
@@ -237,7 +294,11 @@ public class CadOS extends javax.swing.JFrame {
                 cbTipo.setSelectedItem(tbPrincipal.getModel().getValueAt(setar, 2).toString());
                 cboOsSit.setSelectedItem(tbPrincipal.getModel().getValueAt(setar, 3).toString());
                 dtPrevisao.setDate(df.parse(tbPrincipal.getModel().getValueAt(setar, 4).toString()));
-                txtOsEquip.setText(tbPrincipal.getModel().getValueAt(setar, 5).toString());
+
+                cbEquipamento.removeAllItems();
+                cbEquipamento.addItem(tbPrincipal.getModel().getValueAt(setar, 5).toString());
+                cbEquipamento.setSelectedIndex(0);
+
                 txtOsDef.setText(tbPrincipal.getModel().getValueAt(setar, 6).toString());
                 txtOsServ.setText(tbPrincipal.getModel().getValueAt(setar, 7).toString());
                 cbFuncionario.setSelectedItem(tbPrincipal.getModel().getValueAt(setar, 8).toString());
@@ -245,7 +306,7 @@ public class CadOS extends javax.swing.JFrame {
                 txtOsValor.setText(String.valueOf(valor));
                 txtCliente.setText(tbPrincipal.getModel().getValueAt(setar, 10).toString());
                 txtOsDef.setEnabled(true);
-                txtOsEquip.setEnabled(true);
+                cbEquipamento.setEnabled(false);
                 txtOsServ.setEnabled(true);
                 cbFuncionario.setEnabled(true);
                 txtOsValor.setEnabled(true);
@@ -257,6 +318,45 @@ public class CadOS extends javax.swing.JFrame {
                 btnRemover.setEnabled(true);
                 btnImprimir.setEnabled(true);
                 btnEditar.setEnabled(true);
+
+                String sql = "select idcli as ID, nomecli as Nome, telefonecli as Telefone from tbclientes where idcli > 1";
+
+                pst = conexao.prepareStatement(sql);
+                rs = pst.executeQuery();
+                tbClientes.setModel(DbUtils.resultSetToTableModel(rs));
+                SimpleDateFormat dfo = new SimpleDateFormat("yyyy-MM-dd");
+
+                for (int i = 0; i < tbClientes.getModel().getRowCount(); i++) {
+                    if (tbClientes.getModel().getValueAt(i, 1).toString().equals(txtCliente.getText())) {
+                        instanciarTabelaMaquinasAux(Integer.parseInt(tbClientes.getModel().getValueAt(i, 0).toString()));
+                        for (int j = 0; j < tbEquipamentos.getModel().getRowCount(); j++) {
+                            if (cbEquipamento.getSelectedItem().toString().equals(tbEquipamentos.getModel().getValueAt(j, 0).toString())) {                           
+                                if(tbEquipamentos.getModel().getValueAt(j, 2) != null){
+                                    txtCorEquipamento.setText(tbEquipamentos.getModel().getValueAt(j, 2).toString());
+                                }else{
+                                    txtCorEquipamento.setText("Indefinida");
+                                }
+                                if(tbEquipamentos.getModel().getValueAt(j, 3) != null){
+                                    txtMarcaEquipamento.setText(tbEquipamentos.getModel().getValueAt(j, 3).toString());
+                                }else{
+                                    txtMarcaEquipamento.setText("Indefinida");
+                                }
+                                if(tbEquipamentos.getModel().getValueAt(j, 4) != null){
+                                    txtUsuarioEntrada.setText(tbEquipamentos.getModel().getValueAt(j, 4).toString());
+                                }else{
+                                    txtUsuarioEntrada.setText("Administrador");
+                                }
+                                dtGarantia.setEnabled(true);
+                                if (tbEquipamentos.getModel().getValueAt(j, 5) != null) {
+                                    dtGarantia.setDate(dfo.parse(tbEquipamentos.getModel().getValueAt(j, 5).toString()));
+                                } else {
+                                    dtGarantia.setDate(null);
+                                }
+                            }
+                        }
+                    }
+                }
+
             } catch (Exception e) {
                 JOptionPane.showMessageDialog(null, e);
                 limpar();
@@ -269,32 +369,30 @@ public class CadOS extends javax.swing.JFrame {
 
         try {
             int confirma = 0;
-            if ((txtCliente.getText().isEmpty()) || (txtOsEquip.getText().isEmpty()) || (txtOsDef.getText().isEmpty()) || (txtOsServ.getText().isEmpty()) || (txtOsValor.getText().isEmpty()) || dtPrevisao.getDate() == null) {
+            if ((txtCliente.getText().isEmpty()) || (cbEquipamento.getSelectedItem().toString().isEmpty()) || (txtOsDef.getText().isEmpty()) || (txtOsServ.getText().isEmpty()) || (txtOsValor.getText().isEmpty()) || dtPrevisao.getDate() == null) {
                 JOptionPane.showMessageDialog(null, "Preencha todos os campos obrigatorios.");
-                limpar();
                 confirma = 1;
             } else if (cbFuncionario.getSelectedItem().toString().equals("Selecione") == true) {
                 JOptionPane.showMessageDialog(null, "Adicione um Funcionario.");
-                limpar();
             } else if ((Double.parseDouble(txtOsValor.getText().replace(",", ".")) <= 0)) {
                 JOptionPane.showMessageDialog(null, "Adicione um valor maior que 0.");
-                limpar();
             } else if (confirma == 0) {
                 Date d = dtPrevisao.getDate();
                 java.sql.Date dSql = new java.sql.Date(d.getTime());
                 df.format(dSql);
 
-                String sql = "insert into tbos(tipo,situacao,previsao_entreg_os,equipamento,defeito,servico,funcionario,valor,cliente) values(?,?,?,?,?,?,?,?,?)";
+                String sql = "insert into tbos(tipo,situacao,previsao_entreg_os,equipamento,defeito,servico,funcionario,valor,cliente,data_os) values(?,?,?,?,?,?,?,?,?,?)";
                 pst = conexao.prepareStatement(sql);
                 pst.setString(1, cbTipo.getSelectedItem().toString());
                 pst.setString(2, cboOsSit.getSelectedItem().toString());
                 pst.setDate(3, dSql);
-                pst.setString(4, txtOsEquip.getText());
+                pst.setString(4, cbEquipamento.getSelectedItem().toString());
                 pst.setString(5, txtOsDef.getText());
                 pst.setString(6, txtOsServ.getText());
                 pst.setString(7, cbFuncionario.getSelectedItem().toString());
                 pst.setString(8, new DecimalFormat("#,##0.00").format(Double.parseDouble(txtOsValor.getText().replace(",", "."))).replace(",", "."));
                 pst.setString(9, txtCliente.getText());
+                pst.setTimestamp(10, Timestamp.valueOf(cbDataEquipamentos.getItemAt(cbEquipamento.getSelectedIndex())));
 
                 int adicionado = pst.executeUpdate();
                 if (adicionado > 0) {
@@ -306,7 +404,6 @@ public class CadOS extends javax.swing.JFrame {
         } catch (java.lang.NumberFormatException c) {
             JOptionPane.showMessageDialog(null, "Campo Valor só suporta Numeros.");
             JOptionPane.showMessageDialog(null, "Campo Valor Deve ser salvo no formato 0.00 .");
-            limpar();
 
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null, e);
@@ -319,7 +416,7 @@ public class CadOS extends javax.swing.JFrame {
 
         try {
             int confirma = 0;
-            if ((txtCliente.getText().isEmpty()) || (txtOsEquip.getText().isEmpty()) || (txtOsDef.getText().isEmpty()) || (txtOsServ.getText().isEmpty()) || (txtOsValor.getText().isEmpty()) || dtPrevisao.getDate() == null) {
+            if ((txtCliente.getText().isEmpty()) || (cbEquipamento.getSelectedItem().toString().isEmpty()) || (txtOsDef.getText().isEmpty()) || (txtOsServ.getText().isEmpty()) || (txtOsValor.getText().isEmpty()) || dtPrevisao.getDate() == null) {
                 JOptionPane.showMessageDialog(null, "Preencha todos os campos obrigatorios.");
                 limpar();
                 confirma = 1;
@@ -339,7 +436,7 @@ public class CadOS extends javax.swing.JFrame {
                 pst.setString(1, cbTipo.getSelectedItem().toString());
                 pst.setString(2, cboOsSit.getSelectedItem().toString());
                 pst.setDate(3, dSql);
-                pst.setString(4, txtOsEquip.getText());
+                pst.setString(4, cbEquipamento.getSelectedItem().toString());
                 pst.setString(5, txtOsDef.getText());
                 pst.setString(6, txtOsServ.getText());
                 pst.setString(7, cbFuncionario.getSelectedItem().toString());
@@ -347,6 +444,41 @@ public class CadOS extends javax.swing.JFrame {
                 pst.setString(9, txtOs.getText());
 
                 int adicionado = pst.executeUpdate();
+
+                sql = "select idcli as ID, nomecli as Nome, telefonecli as Telefone from tbclientes where idcli > 1";
+
+                pst = conexao.prepareStatement(sql);
+                rs = pst.executeQuery();
+                tbClientes.setModel(DbUtils.resultSetToTableModel(rs));
+                SimpleDateFormat dfo = new SimpleDateFormat("yyyy-MM-dd");
+
+                for (int i = 0; i < tbClientes.getModel().getRowCount(); i++) {
+                    if (tbClientes.getModel().getValueAt(i, 1).toString().equals(txtCliente.getText())) {
+                        instanciarTabelaMaquinasAux(Integer.parseInt(tbClientes.getModel().getValueAt(i, 0).toString()));
+                        for (int j = 0; j < tbEquipamentos.getModel().getRowCount(); j++) {
+                            if (cbEquipamento.getSelectedItem().toString().equals(tbEquipamentos.getModel().getValueAt(j, 0).toString())) {
+
+                                DateFormat df1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+                                int id = Integer.parseInt(tbEquipamentos.getModel().getValueAt(j, 6).toString());
+
+                                sql = "UPDATE tbsubclientes SET garantia=? WHERE idsub=?";
+
+                                pst = conexao.prepareStatement(sql);
+
+                                if (dtGarantia.getDate() != null) {
+                                    pst.setTimestamp(1, Timestamp.valueOf(df1.format(dtGarantia.getDate())));
+                                } else {
+                                    pst.setTimestamp(1, null);
+                                }
+                                pst.setInt(2, id);
+                                pst.executeUpdate();
+
+                            }
+                        }
+                    }
+                }
+
                 if (adicionado > 0) {
                     JOptionPane.showMessageDialog(null, "OS alterada com sucesso.");
                     limpar();
@@ -467,14 +599,20 @@ public class CadOS extends javax.swing.JFrame {
         txtCliente.setText(null);
         txtOs.setText(null);
         txtOsDef.setText(null);
-        txtOsEquip.setText(null);
+        txtCorEquipamento.setText("");
+        txtMarcaEquipamento.setText("");
+        cbEquipamento.removeAllItems();
         txtOsServ.setText(null);
+
+        txtUsuarioEntrada.setText("");
 
         txtOsValor.setText("0.00");
         dtPrevisao.setDate(null);
+        dtGarantia.setEnabled(false);
+        dtGarantia.setDate(null);
         txtCliId.setEnabled(false);
         txtOsDef.setEnabled(false);
-        txtOsEquip.setEnabled(false);
+        cbEquipamento.setEnabled(false);
         txtOsServ.setEnabled(false);
         cbFuncionario.setEnabled(false);
         txtOsValor.setEnabled(false);
@@ -506,6 +644,12 @@ public class CadOS extends javax.swing.JFrame {
         lblUsuario = new javax.swing.JLabel();
         jScrollPane1 = new javax.swing.JScrollPane();
         tbAuxilio = new javax.swing.JTable();
+        meioDeBusca = new javax.swing.ButtonGroup();
+        jScrollPane4 = new javax.swing.JScrollPane();
+        tbEquipamentos = new javax.swing.JTable();
+        cbDataEquipamentos = new javax.swing.JComboBox<>();
+        jScrollPane5 = new javax.swing.JScrollPane();
+        tbClientes = new javax.swing.JTable();
         jPanel10 = new javax.swing.JPanel();
         jPanel11 = new javax.swing.JPanel();
         lblCamposObrigatorios = new javax.swing.JLabel();
@@ -532,7 +676,7 @@ public class CadOS extends javax.swing.JFrame {
         jPanel9 = new javax.swing.JPanel();
         txtOsValor = new javax.swing.JTextField();
         jPanel5 = new javax.swing.JPanel();
-        txtOsEquip = new javax.swing.JTextField();
+        cbEquipamento = new javax.swing.JComboBox<>();
         jPanel1 = new javax.swing.JPanel();
         txtCliente = new javax.swing.JTextField();
         pnTbPrincipal = new javax.swing.JPanel();
@@ -542,6 +686,20 @@ public class CadOS extends javax.swing.JFrame {
         txtCliPesquisar = new javax.swing.JTextField();
         rbClientes = new javax.swing.JRadioButton();
         rbOS_Orcamento = new javax.swing.JRadioButton();
+        jPanel14 = new javax.swing.JPanel();
+        jLabel3 = new javax.swing.JLabel();
+        rbPorServico = new javax.swing.JRadioButton();
+        rbPorNome = new javax.swing.JRadioButton();
+        jLabel4 = new javax.swing.JLabel();
+        cbFiltroSituacao = new javax.swing.JComboBox<>();
+        jPanel12 = new javax.swing.JPanel();
+        txtMarcaEquipamento = new javax.swing.JTextField();
+        jPanel15 = new javax.swing.JPanel();
+        txtCorEquipamento = new javax.swing.JTextField();
+        jPanel16 = new javax.swing.JPanel();
+        txtUsuarioEntrada = new javax.swing.JTextField();
+        jPanel17 = new javax.swing.JPanel();
+        dtGarantia = new com.toedter.calendar.JDateChooser();
 
         txtCliId.setEditable(false);
 
@@ -559,6 +717,32 @@ public class CadOS extends javax.swing.JFrame {
             }
         ));
         jScrollPane1.setViewportView(tbAuxilio);
+
+        tbEquipamentos.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null}
+            },
+            new String [] {
+                "Title 1", "Title 2", "Title 3", "Title 4"
+            }
+        ));
+        jScrollPane4.setViewportView(tbEquipamentos);
+
+        tbClientes.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null}
+            },
+            new String [] {
+                "Title 1", "Title 2", "Title 3", "Title 4"
+            }
+        ));
+        jScrollPane5.setViewportView(tbClientes);
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setTitle("LeGnu`s_EPR - Tela Cadastro de OS");
@@ -669,7 +853,7 @@ public class CadOS extends javax.swing.JFrame {
             jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel6Layout.createSequentialGroup()
                 .addGap(0, 0, 0)
-                .addComponent(jScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 139, Short.MAX_VALUE))
+                .addComponent(jScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 59, Short.MAX_VALUE))
         );
 
         jPanel7.setBackground(java.awt.SystemColor.control);
@@ -721,7 +905,7 @@ public class CadOS extends javax.swing.JFrame {
         jPanel2.setBackground(java.awt.SystemColor.control);
         jPanel2.setBorder(javax.swing.BorderFactory.createTitledBorder(javax.swing.BorderFactory.createMatteBorder(1, 0, 1, 1, new java.awt.Color(153, 153, 153)), "Situação", javax.swing.border.TitledBorder.LEFT, javax.swing.border.TitledBorder.TOP, new java.awt.Font("Arial", 3, 12))); // NOI18N
 
-        cboOsSit.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Na bancada", "Entrega OK", "Orçamento REPROVADO", "Aguardando Aprovação", "Aguardando peças", "Abandonado pelo cliente", "Retornou" }));
+        cboOsSit.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Na bancada", "Pronto", "Entrega OK", "Orçamento REPROVADO", "Aguardando Aprovação", "Aguardando peças", "Abandonado pelo cliente", "Retornou" }));
         cboOsSit.setEnabled(false);
 
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
@@ -791,7 +975,7 @@ public class CadOS extends javax.swing.JFrame {
         jPanel7Layout.setVerticalGroup(
             jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel7Layout.createSequentialGroup()
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 138, Short.MAX_VALUE)
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 58, Short.MAX_VALUE)
                 .addGap(16, 16, 16)
                 .addGroup(jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addComponent(jPanel8, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -807,10 +991,10 @@ public class CadOS extends javax.swing.JFrame {
         jPanel5.setBackground(java.awt.SystemColor.control);
         jPanel5.setBorder(javax.swing.BorderFactory.createTitledBorder(javax.swing.BorderFactory.createMatteBorder(1, 0, 1, 0, new java.awt.Color(153, 153, 153)), "*Equipamento", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.TOP, new java.awt.Font("Arial", 3, 12))); // NOI18N
 
-        txtOsEquip.setEnabled(false);
-        txtOsEquip.addActionListener(new java.awt.event.ActionListener() {
+        cbEquipamento.setEnabled(false);
+        cbEquipamento.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                txtOsEquipActionPerformed(evt);
+                cbEquipamentoActionPerformed(evt);
             }
         });
 
@@ -818,12 +1002,14 @@ public class CadOS extends javax.swing.JFrame {
         jPanel5.setLayout(jPanel5Layout);
         jPanel5Layout.setHorizontalGroup(
             jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(txtOsEquip)
+            .addGroup(jPanel5Layout.createSequentialGroup()
+                .addComponent(cbEquipamento, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addGap(0, 0, 0))
         );
         jPanel5Layout.setVerticalGroup(
             jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel5Layout.createSequentialGroup()
-                .addComponent(txtOsEquip, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(cbEquipamento, javax.swing.GroupLayout.PREFERRED_SIZE, 24, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(0, 0, 0))
         );
 
@@ -898,12 +1084,83 @@ public class CadOS extends javax.swing.JFrame {
         rbOS_Orcamento.setBackground(java.awt.SystemColor.control);
         grupoTbPrincipal.add(rbOS_Orcamento);
         rbOS_Orcamento.setFont(new java.awt.Font("Dialog", 1, 12)); // NOI18N
-        rbOS_Orcamento.setText("Orçamento/Ordem de Serviço");
+        rbOS_Orcamento.setText("Orçamento / OS");
         rbOS_Orcamento.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 rbOS_OrcamentoActionPerformed(evt);
             }
         });
+
+        jPanel14.setBackground(java.awt.SystemColor.control);
+        jPanel14.setBorder(javax.swing.BorderFactory.createMatteBorder(0, 1, 1, 0, new java.awt.Color(153, 153, 153)));
+
+        jLabel3.setFont(new java.awt.Font("Dialog", 3, 14)); // NOI18N
+        jLabel3.setText("Meio de busca");
+
+        meioDeBusca.add(rbPorServico);
+        rbPorServico.setText("Serviço");
+        rbPorServico.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                rbPorServicoActionPerformed(evt);
+            }
+        });
+
+        meioDeBusca.add(rbPorNome);
+        rbPorNome.setSelected(true);
+        rbPorNome.setText("Cliente");
+        rbPorNome.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                rbPorNomeActionPerformed(evt);
+            }
+        });
+
+        jLabel4.setFont(new java.awt.Font("Dialog", 3, 14)); // NOI18N
+        jLabel4.setText("Filtrar por Situação");
+
+        cbFiltroSituacao.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Qualquer", "Na bancada", "Pronto", "Entrega OK", "Orçamento REPROVADO", "Aguardando Aprovação", "Aguardando peças", "Abandonado pelo cliente", "Retornou" }));
+        cbFiltroSituacao.setToolTipText("");
+        cbFiltroSituacao.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                cbFiltroSituacaoActionPerformed(evt);
+            }
+        });
+
+        javax.swing.GroupLayout jPanel14Layout = new javax.swing.GroupLayout(jPanel14);
+        jPanel14.setLayout(jPanel14Layout);
+        jPanel14Layout.setHorizontalGroup(
+            jPanel14Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel14Layout.createSequentialGroup()
+                .addGroup(jPanel14Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel14Layout.createSequentialGroup()
+                        .addGap(6, 6, 6)
+                        .addGroup(jPanel14Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel3)
+                            .addComponent(jLabel4)))
+                    .addGroup(jPanel14Layout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(rbPorNome)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(rbPorServico))
+                    .addGroup(jPanel14Layout.createSequentialGroup()
+                        .addGap(6, 6, 6)
+                        .addComponent(cbFiltroSituacao, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                .addGap(16, 16, 16))
+        );
+        jPanel14Layout.setVerticalGroup(
+            jPanel14Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel14Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 19, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel14Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(rbPorServico)
+                    .addComponent(rbPorNome))
+                .addGap(1, 1, 1)
+                .addComponent(jLabel4, javax.swing.GroupLayout.PREFERRED_SIZE, 19, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(cbFiltroSituacao, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(0, 8, Short.MAX_VALUE))
+        );
 
         javax.swing.GroupLayout pnTbPrincipalLayout = new javax.swing.GroupLayout(pnTbPrincipal);
         pnTbPrincipal.setLayout(pnTbPrincipalLayout);
@@ -911,36 +1168,135 @@ public class CadOS extends javax.swing.JFrame {
             pnTbPrincipalLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(pnTbPrincipalLayout.createSequentialGroup()
                 .addGroup(pnTbPrincipalLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, pnTbPrincipalLayout.createSequentialGroup()
-                        .addContainerGap()
-                        .addComponent(scTbPrincipal, javax.swing.GroupLayout.DEFAULT_SIZE, 828, Short.MAX_VALUE))
                     .addGroup(pnTbPrincipalLayout.createSequentialGroup()
                         .addGap(16, 16, 16)
                         .addComponent(rbClientes)
                         .addGap(18, 18, 18)
-                        .addComponent(rbOS_Orcamento)
-                        .addGap(0, 0, Short.MAX_VALUE))
+                        .addComponent(rbOS_Orcamento))
                     .addGroup(pnTbPrincipalLayout.createSequentialGroup()
                         .addContainerGap()
                         .addComponent(lblPesquisar)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(txtCliPesquisar)))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jPanel14, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+            .addGroup(pnTbPrincipalLayout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(scTbPrincipal, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
                 .addContainerGap())
         );
         pnTbPrincipalLayout.setVerticalGroup(
             pnTbPrincipalLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, pnTbPrincipalLayout.createSequentialGroup()
-                .addGap(16, 16, 16)
-                .addGroup(pnTbPrincipalLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(lblPesquisar)
-                    .addComponent(txtCliPesquisar, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(16, 16, 16)
-                .addGroup(pnTbPrincipalLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(rbClientes)
-                    .addComponent(rbOS_Orcamento))
-                .addGap(16, 16, 16)
+                .addGroup(pnTbPrincipalLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(pnTbPrincipalLayout.createSequentialGroup()
+                        .addGap(16, 16, 16)
+                        .addGroup(pnTbPrincipalLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(lblPesquisar)
+                            .addComponent(txtCliPesquisar, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGap(16, 16, 16)
+                        .addGroup(pnTbPrincipalLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(rbClientes)
+                            .addComponent(rbOS_Orcamento)))
+                    .addComponent(jPanel14, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(scTbPrincipal)
                 .addContainerGap())
+        );
+
+        jPanel12.setBackground(java.awt.SystemColor.control);
+        jPanel12.setBorder(javax.swing.BorderFactory.createTitledBorder(javax.swing.BorderFactory.createMatteBorder(1, 0, 1, 0, new java.awt.Color(153, 153, 153)), "*Marca", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.TOP, new java.awt.Font("Arial", 3, 12))); // NOI18N
+
+        txtMarcaEquipamento.setEditable(false);
+        txtMarcaEquipamento.setEnabled(false);
+
+        javax.swing.GroupLayout jPanel12Layout = new javax.swing.GroupLayout(jPanel12);
+        jPanel12.setLayout(jPanel12Layout);
+        jPanel12Layout.setHorizontalGroup(
+            jPanel12Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel12Layout.createSequentialGroup()
+                .addGap(0, 0, 0)
+                .addComponent(txtMarcaEquipamento, javax.swing.GroupLayout.DEFAULT_SIZE, 150, Short.MAX_VALUE)
+                .addGap(0, 0, 0))
+        );
+        jPanel12Layout.setVerticalGroup(
+            jPanel12Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel12Layout.createSequentialGroup()
+                .addGap(0, 0, Short.MAX_VALUE)
+                .addComponent(txtMarcaEquipamento, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(0, 0, 0))
+        );
+
+        jPanel15.setBackground(java.awt.SystemColor.control);
+        jPanel15.setBorder(javax.swing.BorderFactory.createTitledBorder(javax.swing.BorderFactory.createMatteBorder(1, 0, 1, 0, new java.awt.Color(153, 153, 153)), "*Cor", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.TOP, new java.awt.Font("Arial", 3, 12))); // NOI18N
+
+        txtCorEquipamento.setEditable(false);
+        txtCorEquipamento.setEnabled(false);
+        txtCorEquipamento.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                txtCorEquipamentoActionPerformed(evt);
+            }
+        });
+
+        javax.swing.GroupLayout jPanel15Layout = new javax.swing.GroupLayout(jPanel15);
+        jPanel15.setLayout(jPanel15Layout);
+        jPanel15Layout.setHorizontalGroup(
+            jPanel15Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel15Layout.createSequentialGroup()
+                .addGap(0, 0, 0)
+                .addComponent(txtCorEquipamento, javax.swing.GroupLayout.DEFAULT_SIZE, 127, Short.MAX_VALUE)
+                .addGap(0, 0, 0))
+        );
+        jPanel15Layout.setVerticalGroup(
+            jPanel15Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel15Layout.createSequentialGroup()
+                .addGap(0, 0, Short.MAX_VALUE)
+                .addComponent(txtCorEquipamento, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+        );
+
+        jPanel16.setBackground(java.awt.SystemColor.control);
+        jPanel16.setBorder(javax.swing.BorderFactory.createTitledBorder(javax.swing.BorderFactory.createMatteBorder(1, 0, 1, 0, new java.awt.Color(153, 153, 153)), "*Usuario que deu entrada", javax.swing.border.TitledBorder.LEFT, javax.swing.border.TitledBorder.TOP, new java.awt.Font("Arial", 3, 12))); // NOI18N
+
+        txtUsuarioEntrada.setEnabled(false);
+        txtUsuarioEntrada.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                txtUsuarioEntradaActionPerformed(evt);
+            }
+        });
+
+        javax.swing.GroupLayout jPanel16Layout = new javax.swing.GroupLayout(jPanel16);
+        jPanel16.setLayout(jPanel16Layout);
+        jPanel16Layout.setHorizontalGroup(
+            jPanel16Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(txtUsuarioEntrada, javax.swing.GroupLayout.DEFAULT_SIZE, 168, Short.MAX_VALUE)
+        );
+        jPanel16Layout.setVerticalGroup(
+            jPanel16Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(txtUsuarioEntrada, javax.swing.GroupLayout.DEFAULT_SIZE, 24, Short.MAX_VALUE)
+        );
+
+        jPanel17.setBackground(java.awt.SystemColor.control);
+        jPanel17.setBorder(javax.swing.BorderFactory.createTitledBorder(javax.swing.BorderFactory.createMatteBorder(1, 0, 1, 0, new java.awt.Color(153, 153, 153)), "* Garantia", javax.swing.border.TitledBorder.LEFT, javax.swing.border.TitledBorder.TOP, new java.awt.Font("Arial", 3, 12))); // NOI18N
+
+        dtGarantia.setBackground(java.awt.SystemColor.control);
+        dtGarantia.setDateFormatString("dd/MM/yyyy");
+        dtGarantia.setEnabled(false);
+
+        javax.swing.GroupLayout jPanel17Layout = new javax.swing.GroupLayout(jPanel17);
+        jPanel17.setLayout(jPanel17Layout);
+        jPanel17Layout.setHorizontalGroup(
+            jPanel17Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel17Layout.createSequentialGroup()
+                .addGap(0, 0, 0)
+                .addComponent(dtGarantia, javax.swing.GroupLayout.DEFAULT_SIZE, 133, Short.MAX_VALUE)
+                .addGap(0, 0, 0))
+        );
+        jPanel17Layout.setVerticalGroup(
+            jPanel17Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel17Layout.createSequentialGroup()
+                .addGap(1, 1, 1)
+                .addComponent(dtGarantia, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(0, 0, 0))
         );
 
         javax.swing.GroupLayout jPanel11Layout = new javax.swing.GroupLayout(jPanel11);
@@ -951,7 +1307,7 @@ public class CadOS extends javax.swing.JFrame {
                 .addComponent(pnTbPrincipal, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGroup(jPanel11Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jPanel11Layout.createSequentialGroup()
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 34, Short.MAX_VALUE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(btnAdicionar, javax.swing.GroupLayout.PREFERRED_SIZE, 64, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(btnEditar, javax.swing.GroupLayout.PREFERRED_SIZE, 72, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -961,18 +1317,31 @@ public class CadOS extends javax.swing.JFrame {
                         .addComponent(btnResetar, javax.swing.GroupLayout.PREFERRED_SIZE, 65, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(8, 8, 8)
                         .addComponent(btnImprimir, javax.swing.GroupLayout.PREFERRED_SIZE, 68, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addContainerGap(22, Short.MAX_VALUE))
+                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                     .addComponent(jPanel6, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(jPanel7, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(jPanel11Layout.createSequentialGroup()
                         .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addGap(0, 0, 0)
+                        .addGap(8, 8, 8)
                         .addComponent(btnCliente, javax.swing.GroupLayout.PREFERRED_SIZE, 171, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addComponent(jPanel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel11Layout.createSequentialGroup()
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(lblCamposObrigatorios)
-                        .addGap(16, 16, 16))))
+                        .addGap(16, 16, 16))
+                    .addGroup(jPanel11Layout.createSequentialGroup()
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(jPanel11Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(jPanel11Layout.createSequentialGroup()
+                                .addComponent(jPanel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addGap(8, 8, 8)
+                                .addComponent(jPanel16, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(jPanel11Layout.createSequentialGroup()
+                                .addComponent(jPanel12, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addComponent(jPanel15, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jPanel17, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addContainerGap())))
         );
         jPanel11Layout.setVerticalGroup(
             jPanel11Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -984,9 +1353,16 @@ public class CadOS extends javax.swing.JFrame {
                 .addGroup(jPanel11Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(btnCliente, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(16, 16, 16)
-                .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(16, 16, 16)
+                .addGap(14, 14, 14)
+                .addGroup(jPanel11Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jPanel16, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel11Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jPanel12, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jPanel15, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jPanel17, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jPanel6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGap(16, 16, 16)
                 .addComponent(jPanel7, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
@@ -1030,7 +1406,7 @@ public class CadOS extends javax.swing.JFrame {
             .addComponent(jPanel10, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
         );
 
-        setSize(new java.awt.Dimension(1296, 728));
+        setSize(new java.awt.Dimension(911, 608));
         setLocationRelativeTo(null);
     }// </editor-fold>//GEN-END:initComponents
 
@@ -1072,10 +1448,6 @@ public class CadOS extends javax.swing.JFrame {
         // TODO add your handling code here:
     }//GEN-LAST:event_cbTipoActionPerformed
 
-    private void txtOsEquipActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtOsEquipActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_txtOsEquipActionPerformed
-
     private void rbOS_OrcamentoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_rbOS_OrcamentoActionPerformed
         // TODO add your handling code here:
         instanciarTabelaOrcamento();
@@ -1107,6 +1479,80 @@ public class CadOS extends javax.swing.JFrame {
         // TODO add your handling code here:
         fecharOS();
     }//GEN-LAST:event_formWindowClosed
+
+    private void rbPorNomeActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_rbPorNomeActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_rbPorNomeActionPerformed
+
+    private void rbPorServicoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_rbPorServicoActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_rbPorServicoActionPerformed
+
+    private void cbEquipamentoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cbEquipamentoActionPerformed
+        try {
+            dtGarantia.setDate(null);
+            String sql = "select idcli as ID, nomecli as Nome, telefonecli as Telefone from tbclientes where idcli > 1";
+
+            pst = conexao.prepareStatement(sql);
+            rs = pst.executeQuery();
+            tbClientes.setModel(DbUtils.resultSetToTableModel(rs));
+            SimpleDateFormat dfo = new SimpleDateFormat("yyyy-MM-dd");
+
+            for (int i = 0; i < tbClientes.getModel().getRowCount(); i++) {
+                if (tbClientes.getModel().getValueAt(i, 1).toString().equals(txtCliente.getText())) {
+                    instanciarTabelaMaquinasAux(Integer.parseInt(tbClientes.getModel().getValueAt(i, 0).toString()));
+                    for (int j = 0; j < tbEquipamentos.getModel().getRowCount(); j++) {
+                        if (cbEquipamento.getSelectedItem().toString().equals(tbEquipamentos.getModel().getValueAt(j, 0).toString())) {
+                            txtCorEquipamento.setText(tbEquipamentos.getModel().getValueAt(j, 2).toString());
+                            txtMarcaEquipamento.setText(tbEquipamentos.getModel().getValueAt(j, 3).toString());
+                            txtUsuarioEntrada.setText(tbEquipamentos.getModel().getValueAt(j, 4).toString());
+                            dtGarantia.setEnabled(true);
+                            dtGarantia.setDate(dfo.parse(tbEquipamentos.getModel().getValueAt(j, 5).toString()));
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+
+        }
+    }//GEN-LAST:event_cbEquipamentoActionPerformed
+
+    private void txtCorEquipamentoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtCorEquipamentoActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_txtCorEquipamentoActionPerformed
+
+    private void cbFiltroSituacaoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cbFiltroSituacaoActionPerformed
+        try {
+            String sql;
+            if (tipo == "Orcamento_OS") {
+                if (!cbFiltroSituacao.getSelectedItem().equals("Qualquer")) {
+                    sql = "select os as Numero_da_Ordem_de_Serviço, data_os as Emição, tipo as Tipo, situacao as Situação, previsao_entreg_os as Previsão_de_Entrega, equipamento as Equipamento, defeito as Defeito, servico as Serviço, funcionario as Funcionario, valor as Valor, cliente as Cliente from tbos where situacao = '" + cbFiltroSituacao.getSelectedItem() + "'";
+
+                    pst = conexao.prepareStatement(sql);
+                    rs = pst.executeQuery();
+                    tbPrincipal.setModel(DbUtils.resultSetToTableModel(rs));
+
+                } else {
+                    sql = "select os as Numero_da_Ordem_de_Serviço, data_os as Emição, tipo as Tipo, situacao as Situação, previsao_entreg_os as Previsão_de_Entrega, equipamento as Equipamento, defeito as Defeito, servico as Serviço, funcionario as Funcionario, valor as Valor, cliente as Cliente from tbos";
+
+                    pst = conexao.prepareStatement(sql);
+                    rs = pst.executeQuery();
+                    tbPrincipal.setModel(DbUtils.resultSetToTableModel(rs));
+                }
+
+            }
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, e);
+            limpar();
+
+        }
+
+    }//GEN-LAST:event_cbFiltroSituacaoActionPerformed
+
+    private void txtUsuarioEntradaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtUsuarioEntradaActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_txtUsuarioEntradaActionPerformed
 
     /**
      * @param args the command line arguments
@@ -1150,14 +1596,25 @@ public class CadOS extends javax.swing.JFrame {
     private javax.swing.JButton btnImprimir;
     private javax.swing.JButton btnRemover;
     private javax.swing.JButton btnResetar;
+    private javax.swing.JComboBox<String> cbDataEquipamentos;
+    private javax.swing.JComboBox<String> cbEquipamento;
+    private javax.swing.JComboBox<String> cbFiltroSituacao;
     private javax.swing.JComboBox<String> cbFuncionario;
     private javax.swing.JComboBox<String> cbTipo;
     private javax.swing.JComboBox<String> cboOsSit;
+    private com.toedter.calendar.JDateChooser dtGarantia;
     private com.toedter.calendar.JDateChooser dtPrevisao;
     private javax.swing.ButtonGroup grupoTbPrincipal;
+    private javax.swing.JLabel jLabel3;
+    private javax.swing.JLabel jLabel4;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel10;
     private javax.swing.JPanel jPanel11;
+    private javax.swing.JPanel jPanel12;
+    private javax.swing.JPanel jPanel14;
+    private javax.swing.JPanel jPanel15;
+    private javax.swing.JPanel jPanel16;
+    private javax.swing.JPanel jPanel17;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;
     private javax.swing.JPanel jPanel4;
@@ -1169,22 +1626,31 @@ public class CadOS extends javax.swing.JFrame {
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JScrollPane jScrollPane3;
+    private javax.swing.JScrollPane jScrollPane4;
+    private javax.swing.JScrollPane jScrollPane5;
     private javax.swing.JLabel lblCamposObrigatorios;
     private javax.swing.JLabel lblPesquisar;
     public javax.swing.JLabel lblUsuario;
+    private javax.swing.ButtonGroup meioDeBusca;
     private javax.swing.JPanel pnTbPrincipal;
     private javax.swing.JRadioButton rbClientes;
     private javax.swing.JRadioButton rbOS_Orcamento;
+    private javax.swing.JRadioButton rbPorNome;
+    private javax.swing.JRadioButton rbPorServico;
     private javax.swing.JScrollPane scTbPrincipal;
     private javax.swing.JTable tbAuxilio;
+    private javax.swing.JTable tbClientes;
+    private javax.swing.JTable tbEquipamentos;
     private javax.swing.JTable tbPrincipal;
     private javax.swing.JTextField txtCliId;
     private javax.swing.JTextField txtCliPesquisar;
     private javax.swing.JTextField txtCliente;
+    private javax.swing.JTextField txtCorEquipamento;
+    private javax.swing.JTextField txtMarcaEquipamento;
     private javax.swing.JTextField txtOs;
     private javax.swing.JTextArea txtOsDef;
-    private javax.swing.JTextField txtOsEquip;
     private javax.swing.JTextArea txtOsServ;
     private javax.swing.JTextField txtOsValor;
+    private javax.swing.JTextField txtUsuarioEntrada;
     // End of variables declaration//GEN-END:variables
 }
